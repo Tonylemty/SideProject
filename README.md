@@ -15,7 +15,7 @@
 5. 接著持續點擊下一步
 6. 當要進行安裝時，記得將「Install for all users」的選項勾選起來，在進行安裝
 ##### Python 下載教學的相關影片：
-1. [Python 安裝教程](https://reurl.cc/V0ovWb)
+1. [Python 安裝教程](https://reurl.cc/RLoVWZ)
 2. [怎麼正確下載安裝 Python + Pycharm？如何配置環境？](https://reurl.cc/WAoZ87)
 
 
