@@ -38,7 +38,7 @@ class BuyTicketSystem:
     def inputSearchInformation(self):
         self.startStation = input('請輸入起始站名（如：新左營）：')
         self.endStation = input('請輸入到達站名（如：臺北）：')
-        self.date = input('請輸入時間（如：YYYYMMDD）：')
+        self.date = input('請輸入日期（如：YYYYMMDD）：')
         self.time = input('請輸入起迄時間，以 30 分鐘為單位（如：00:00）：')
     
     # 修改使用者輸入的站名
@@ -93,7 +93,7 @@ class BuyTicketSystem:
             print(tb)
 
         except Exception as e:
-            print('檢索發生錯誤（請注意「臺」字）')
+            print('檢索發生錯誤')
 
     # 進入訂票頁面
     def enterBuyTicketPage(self):
