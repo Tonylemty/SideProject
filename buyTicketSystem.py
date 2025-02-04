@@ -21,9 +21,11 @@ class BuyTicketSystem:
     def __init__(self):
         self.driver = webdriver.Chrome(service=SERVICE, options=OPTIONS)
         self.driver.get('https://www.railway.gov.tw/tra-tip-web/tip')
+        self.driver.maximize_window()
 
     def runSystem(self):
         self.inputSearchInformation()
+        self.checkWord()
         self.sendSearchInformation()
         self.buildTimeSchedule()
         self.enterBuyTicketPage()
@@ -37,7 +39,14 @@ class BuyTicketSystem:
         self.startStation = input('請輸入起始站名（如：新左營）：')
         self.endStation = input('請輸入到達站名（如：臺北）：')
         self.date = input('請輸入時間（如：YYYYMMDD）：')
-        self.time = input('請輸入起迄時間（如：00:00）：')
+        self.time = input('請輸入起迄時間，以 30 分鐘為單位（如：00:00）：')
+    
+    # 修改使用者輸入的站名
+    def checkWord(self):
+        if (self.startStation.find('台') != -1):
+            self.startStation = self.startStation.replace('台', '臺')
+        elif (self.endStation.find('台') != -1):
+            self.endStation = self.endStation.replace('台', '臺')
 
     #  送出搜尋資訊
     def sendSearchInformation(self):
@@ -84,7 +93,7 @@ class BuyTicketSystem:
             print(tb)
 
         except Exception as e:
-            print(f"發生錯誤: {e}")
+            print('檢索發生錯誤（請注意「臺」字）')
 
     # 進入訂票頁面
     def enterBuyTicketPage(self):
@@ -93,7 +102,7 @@ class BuyTicketSystem:
             col = row.find_elements(By.TAG_NAME, "td")
             if col[0].text.find(train_number) != -1:
                 col[9].click()
-                print('已進入訂票頁面\n')
+                print('已進入訂票頁面...\n')
                 break
 
     # 獲取所有分頁的句柄和切換到最新打開的分頁
@@ -110,7 +119,8 @@ class BuyTicketSystem:
             print("身份證字號輸入成功！")
 
         except Exception as e:
-            print(f"無法定位身份證欄位: {e}")
+            print("無法定位身份證欄位")
+            self.driver.quit()
 
     # 處理驗證碼，等待並手動完成驗證
     # 可能會出現座位不足
@@ -121,9 +131,9 @@ class BuyTicketSystem:
                 EC.element_to_be_clickable((By.CLASS_NAME, "btn-3d"))
             )
             self.driver.find_element(By.CLASS_NAME, "btn-3d").click()
-            print("驗證完成，進入下一步！\n")
+            print("驗證完成！\n")
         except Exception as e:
-            print(f"驗證失敗: {e}")
+            print("驗證失敗")
             self.driver.quit()
     
     # 印出購票資訊
@@ -145,14 +155,14 @@ class BuyTicketSystem:
             row_data = [card_id.text.strip(), row_elements[0].text.strip(), row_elements[1].text.strip(), row_elements[4].text.strip()]
             ticket_table.add_row(row_data)
 
-            print('購票成功!!!')
-            print("購票資訊")
+            print('訂票成功，請前往台鐵官網進行付款')
+            print("車票資訊")
             print(ticket_table)
 
-            # driver.quit()
+            self.driver.quit()
 
         except Exception as e:
-            print(f"發生錯誤: {e}")
+            print("購票失敗")
 
 
 if __name__ == '__main__':
