@@ -13,6 +13,9 @@
 using namespace std;
 using json = nlohmann::json;
 
+
+const string USER_SETTINGS = "user_settings.json";
+
 class Weather {
 private:
 
@@ -202,6 +205,9 @@ public:
     };
 public:
     Weather() {}
+
+    Weather(const string &lang): language_code(lang) {}
+
     Weather(const string &key, const string &city, const string &lang, const string &unit): api_key(key), city_name(city), language_code(lang), temp_unit(unit) {
 
         json geo_data = getCityCoordinates(city_name, api_key);
@@ -335,11 +341,37 @@ public:
     }
 };
 
-bool isFirstTime() {
-    json user_data = json::parse("test.json");
-    bool first_time = user_data["isFirstTime"];
-    
-    return first_time;
+json readSettings() {
+    fstream inputFile(USER_SETTINGS, ios::in);
+    json config;
+
+    if (inputFile.is_open()) {
+        inputFile >> config;
+        inputFile.close();
+    } else {
+        config = {
+            {"isFirstTime", true},
+            {"api_key", ""},
+            {"languages", "en"},
+            {"unit", "metric"}
+        };
+    }
+    return config;
+}
+
+void writeSettings(const json &config) {
+    fstream outputFile(USER_SETTINGS);
+
+    if (outputFile.is_open()) {
+        outputFile << config.dump(4);
+        outputFile.close();
+    } else {
+        cerr << "Unable to write to JSON file" << endl;
+    }
+}
+
+bool isFirstTime(const json &config) {
+    return config["isFirstTime"].get<bool>();
 }
 
 // api_key = 2872c1495047301be6e0ea08b32aa1c0
@@ -354,6 +386,7 @@ int main() {
 
     map<int, string> units = {{1, "metric"}, {2, "imperial"}};
 
+    json settings = readSettings();
     
     Weather tempWeather;
     string city;
@@ -364,7 +397,7 @@ int main() {
     int lang_code;
     int unit_code;
 
-    if (isFirstTime()) {
+    if (isFirstTime(settings)) {
         cout << "Select a language by number (1.English 2.繁體中文 3.简体中文 4.français 5.Deutsch 6.日本語 7.한국어 8.Español):";
         (cin >> lang_code).get();
     
@@ -378,20 +411,33 @@ int main() {
         (cin >> API_KEY).get();
         
         cout << tempWeather.dict[selected_lang]["select_unit"];
-        cin >> unit_code;
+        (cin >> unit_code).get();
         
         if (units.find(unit_code) != units.end()) {
             selected_unit = units[unit_code];
         } else {
-            selected_unit = "°C";
+            selected_unit = "metric";
         }
+
+        settings["isFirstTime"] = false;
+        settings["api_key"] = API_KEY;
+        settings["languages"] = selected_lang;
+        settings["unit"] = selected_unit;
+        
+        writeSettings(settings);
+
+    } else {
+
+        API_KEY = settings["api_key"].get<string>();
+        selected_lang = settings["languages"].get<string>();
+        selected_unit = settings["unit"].get<string>();
     }
 
     cout << tempWeather.dict[selected_lang]["enter_city"];
     getline(cin, city);
     
     if (city == "history") {
-        Weather getHistory;
+        Weather getHistory(selected_lang);
         getHistory.getHistoryData();
 
     } else {
