@@ -42,6 +42,7 @@ private:
     string city_name;
     string weather_condition;
     string language_code;
+    string temp_unit;
 
     int temp;
     int humidity;
@@ -103,7 +104,8 @@ private:
 public:
     map<string, map<string, string>> dict = {
         {"en", {
-            {"select_language", "Select language by number"},
+            {"enter_api", "Please enter your API key:"},
+            {"select_unit", "Select a unit by number (1.°C 2.°F):"},
             {"enter_city", "Enter city name (or type 'history' to get history data):"},
             {"weather_history", "Weather History"},
             {"history_prompt", "How many pieces of data do you want (or type all):"},
@@ -114,7 +116,8 @@ public:
             {"api_error", "Error from API: "}
         }},
         {"zh_tw", {
-            {"select_language", "請選擇語言（輸入數字）"},
+            {"enter_api", "請輸入您的 API 金鑰："},
+            {"select_unit", "請選擇一個單位（1.°C 2.°F）："},
             {"enter_city", "請輸入城市名稱（或輸入 'history' 以獲取歷史數據）："},
             {"weather_history", "天氣歷史"},
             {"history_prompt", "您想獲取多少條數據（或輸入 all）："},
@@ -125,7 +128,8 @@ public:
             {"api_error", "API 返回錯誤："}
         }},
         {"zh_cn", {
-            {"select_language", "请选择语言（输入数字）"},
+            {"enter_api", "请输入您的 API 密钥："},
+            {"select_unit", "请选择一个单位（1.°C 2.°F）："},
             {"enter_city", "请输入城市名称（或输入 'history' 获取历史数据）："},
             {"weather_history", "天气历史"},
             {"history_prompt", "您想获取多少条数据（或输入 all）："},
@@ -136,7 +140,8 @@ public:
             {"api_error", "API 返回错误："}
         }},
         {"fr", {
-            {"select_language", "Sélectionnez la langue par numéro"},
+            {"enter_api", "Entrez votre clé API:"},
+            {"select_unit", "Sélectionnez une unité par numéro (1.°C 2.°F) :"},
             {"enter_city", "Entrez le nom de la ville (ou tapez 'history' pour obtenir les données historiques):"},
             {"weather_history", "Historique météo"},
             {"history_prompt", "Combien de données souhaitez-vous récupérer ? (ou tapez 'all') :"},
@@ -147,7 +152,8 @@ public:
             {"api_error", "Erreur de l'API : "}
         }},
         {"de", {
-            {"select_language", "Wählen Sie die Sprache nach Nummer"},
+            {"enter_api", "Geben Sie Ihren API-Schlüssel ein:"},
+            {"select_unit", "Wählen Sie eine Einheit anhand der Nummer aus (1.°C 2.°F):"},
             {"enter_city", "Geben Sie den Stadtnamen ein (oder tippen Sie 'history', um Verlaufsdaten zu erhalten):"},
             {"weather_history", "Wetterverlauf"},
             {"history_prompt", "Wie viele Daten möchten Sie abrufen? (oder 'all' eingeben):"},
@@ -158,7 +164,8 @@ public:
             {"api_error", "Fehler von der API: "}
         }},
         {"ja", {
-            {"select_language", "番号で言語を選択してください"},
+            {"enter_api", "APIキーを入力してください："},
+            {"select_unit", "数字で単位を選択してください（1.°C 2.°F）："},
             {"enter_city", "都市名を入力してください（または 'history' と入力して履歴データを取得）："},
             {"weather_history", "天気履歴"},
             {"history_prompt", "取得したいデータ数を入力してください（または all と入力）："},
@@ -169,7 +176,8 @@ public:
             {"api_error", "API のエラー："}
         }},
         {"kr", {
-            {"select_language", "번호로 언어를 선택하세요"},
+            {"enter_api", "API 키를 입력하세요:"},
+            {"select_unit", "숫자로 단위를 선택하세요 (1.°C 2.°F):"},
             {"enter_city", "도시 이름을 입력하세요 (‘history’를 입력하면 기록 데이터를 조회할 수 있습니다):"},
             {"weather_history", "날씨 기록"},
             {"history_prompt", "몇 개의 데이터를 가져오시겠습니까? (또는 'all' 입력):"},
@@ -180,7 +188,8 @@ public:
             {"api_error", "API 오류: "}
         }},
         {"es", {
-            {"select_language", "Seleccione el idioma por número"},
+            {"enter_api", "Introduzca su clave API:"},
+            {"select_unit", "Seleccione una unidad por número (1.°C 2.°F):"},
             {"enter_city", "Ingrese el nombre de la ciudad (o escriba 'history' para obtener datos históricos):"},
             {"weather_history", "Historial del clima"},
             {"history_prompt", "¿Cuántos datos desea obtener? (o escriba 'all'): "},
@@ -193,14 +202,14 @@ public:
     };
 public:
     Weather() {}
-    Weather(const string &key, const string &city, const string &lang): api_key(key), city_name(city), language_code(lang) {
+    Weather(const string &key, const string &city, const string &lang, const string &unit): api_key(key), city_name(city), language_code(lang), temp_unit(unit) {
 
         json geo_data = getCityCoordinates(city_name, api_key);
         if (geo_data.is_array() && !geo_data.empty()) {
             double lat = geo_data.at(0).at("lat");
             double lon = geo_data.at(0).at("lon");
             url = "http://api.openweathermap.org/data/2.5/weather?lat=" + to_string(lat) + "&lon=" + to_string(lon) + "&appid=" + 
-                  api_key + "&units=metric&lang=" + language_code;
+                  api_key + "&units=" + temp_unit + "&lang=" + language_code;
 
         } else {
             cerr << dict[language_code]["api_error"] << "City not found" << endl;
@@ -242,6 +251,10 @@ public:
         return false;
     }
 
+    string returnUnit(const string &u) {
+        return (u == "metric" ? "°C" : "°F");
+    }
+
     void saveHistory() {
         char save;
         cout << dict[language_code]["save_prompt"];
@@ -251,6 +264,7 @@ public:
             fstream file;
             time_t now = time(0);
             string current_time = ctime(&now);
+            string u = returnUnit(temp_unit);
 
             file.open("weather_history.txt", ios::app);
 
@@ -259,13 +273,13 @@ public:
                 return;
             }
 
-        file << current_time;
-        file << translation[language_code]["City"]<< ": " << city_name << endl;
-        file << translation[language_code]["Temperature"]<< ": " << temp << "°C" << endl;
-        file << translation[language_code]["MaxTemp"]<< ": " << temp_max << "°C" << endl;
-        file << translation[language_code]["MinTemp"]<< ": " << temp_min << "°C" << endl;
-        file << translation[language_code]["Pressure"]<< ": " << pressure << "hPa" << endl;
-        file << translation[language_code]["Humidity"]<< ": " << humidity << "%" << endl << endl;
+            file << current_time;
+            file << translation[language_code]["City"]<< ": " << city_name << endl;
+            file << translation[language_code]["Temperature"]<< ": " << temp << u << endl;
+            file << translation[language_code]["MaxTemp"]<< ": " << temp_max << u << endl;
+            file << translation[language_code]["MinTemp"]<< ": " << temp_min << u << endl;
+            file << translation[language_code]["Pressure"]<< ": " << pressure << "hPa" << endl;
+            file << translation[language_code]["Humidity"]<< ": " << humidity << "%" << endl << endl;
 
             file.close();
         }
@@ -309,17 +323,26 @@ public:
     }
 
     void outputData() {
-        
+        string u = returnUnit(temp_unit);
+
         cout << translation[language_code]["City"]<< ": " << city_name << endl;
-        cout << translation[language_code]["Temperature"]<< ": " << temp << "°C" << endl;
-        cout << translation[language_code]["MaxTemp"]<< ": " << temp_max << "°C" << endl;
-        cout << translation[language_code]["MinTemp"]<< ": " << temp_min << "°C" << endl;
+        cout << translation[language_code]["Temperature"]<< ": " << temp << u << endl;
+        cout << translation[language_code]["MaxTemp"]<< ": " << temp_max << u << endl;
+        cout << translation[language_code]["MinTemp"]<< ": " << temp_min << u << endl;
         cout << translation[language_code]["Pressure"]<< ": " << pressure << "hPa" << endl;
         cout << translation[language_code]["Humidity"]<< ": " << humidity << "%" << endl << endl;
         
     }
 };
 
+bool isFirstTime() {
+    json user_data = json::parse("test.json");
+    bool first_time = user_data["isFirstTime"];
+    
+    return first_time;
+}
+
+// api_key = 2872c1495047301be6e0ea08b32aa1c0
 int main() {
     system("chcp 65001 > nul");
     map<int, string> langs = {
@@ -329,31 +352,50 @@ int main() {
         {7, "kr"}, {8, "es"}
     };
 
-    string city;
-    string selected_lang;
-    string API_KEY = "2872c1495047301be6e0ea08b32aa1c0";
-    char save;
-    int code;
+    map<int, string> units = {{1, "metric"}, {2, "imperial"}};
 
-    cout << "Select language by number (1.English 2.繁體中文 3.简体中文 4.français 5.Deutsch 6.日本語 7.한국어 8.Español): ";
-    (cin >> code).get();
-
-    if (langs.find(code) != langs.end()) {
-        selected_lang = langs[code];
-    } else {
-        selected_lang = "en";
-    }
     
     Weather tempWeather;
+    string city;
+    string selected_lang;
+    string selected_unit;
+    string API_KEY;
+    char save;
+    int lang_code;
+    int unit_code;
+
+    if (isFirstTime()) {
+        cout << "Select a language by number (1.English 2.繁體中文 3.简体中文 4.français 5.Deutsch 6.日本語 7.한국어 8.Español):";
+        (cin >> lang_code).get();
+    
+        if (langs.find(lang_code) != langs.end()) {
+            selected_lang = langs[lang_code];
+        } else {
+            selected_lang = "en";
+        }
+        
+        cout << tempWeather.dict[selected_lang]["enter_api"];
+        (cin >> API_KEY).get();
+        
+        cout << tempWeather.dict[selected_lang]["select_unit"];
+        cin >> unit_code;
+        
+        if (units.find(unit_code) != units.end()) {
+            selected_unit = units[unit_code];
+        } else {
+            selected_unit = "°C";
+        }
+    }
+
     cout << tempWeather.dict[selected_lang]["enter_city"];
     getline(cin, city);
-
+    
     if (city == "history") {
-        Weather getHistory(API_KEY, "", "");
+        Weather getHistory;
         getHistory.getHistoryData();
 
     } else {
-        Weather Client(API_KEY, city, selected_lang);
+        Weather Client(API_KEY, city, selected_lang, selected_unit);
         Client.run();        
     }
 
