@@ -292,33 +292,39 @@ public:
 
     }
 
-    void getHistoryData(const string& num) {
+    void getHistoryData() {
         fstream file;
         file.open("weather_history.txt", ios::in);
-    
+
         if (!file.is_open()) {
             cout << dict[language_code]["file_error"] << endl;
             return;
         }
-    
+
         string line;
+        string num;
+        cout << dict[language_code]["history_prompt"];
+        cin >> num;
         cout << "========= " << dict[language_code]["weather_history"] << " =========" << endl;
-    
+
         if (num == "all") {
             while (getline(file, line)) {
                 cout << line << endl;
             }
+
         } else {
             int count = 0;
             int targetCount = stoi(num);
             while (count < targetCount && getline(file, line)) {
+                
                 cout << line << endl;
+                
                 if (line.empty()) {
                     count++;
                 }
             }
         }
-    
+
         file.close();
     }
 
@@ -368,30 +374,75 @@ bool isFirstTime(const json &config) {
     return config["isFirstTime"].get<bool>();
 }
 
-
-int main(int argc, char* argv[]) {
+// api_key = 2872c1495047301be6e0ea08b32aa1c0
+int main() {
     system("chcp 65001 > nul");
+    map<int, string> langs = {
+        {1, "en"}, {2, "zh_tw"},
+        {3, "zh_cn"}, {4, "fr"},
+        {5, "de"}, {6, "ja"},
+        {7, "kr"}, {8, "es"}
+    };
 
-    // 檢查是否提供了足夠的參數
-    if (argc < 4) {
-        cerr << "Usage: weather <city> <language> <unit>" << endl;
-        return 1;
-    }
-
-    string city = argv[1];
-    string selected_lang = argv[2];
-    string selected_unit = argv[3];
+    map<int, string> units = {{1, "metric"}, {2, "imperial"}};
 
     json settings = readSettings();
-    string API_KEY = settings["api_key"].get<string>();
+    
+    Weather tempWeather;
+    string city;
+    string selected_lang;
+    string selected_unit;
+    string API_KEY;
+    char save;
+    int lang_code;
+    int unit_code;
 
+    if (isFirstTime(settings)) {
+        cout << "Select a language by number (1.English 2.繁體中文 3.简体中文 4.français 5.Deutsch 6.日本語 7.한국어 8.Español):";
+        (cin >> lang_code).get();
+    
+        if (langs.find(lang_code) != langs.end()) {
+            selected_lang = langs[lang_code];
+        } else {
+            selected_lang = "en";
+        }
+        
+        cout << tempWeather.dict[selected_lang]["enter_api"];
+        (cin >> API_KEY).get();
+        
+        cout << tempWeather.dict[selected_lang]["select_unit"];
+        (cin >> unit_code).get();
+        
+        if (units.find(unit_code) != units.end()) {
+            selected_unit = units[unit_code];
+        } else {
+            selected_unit = "metric";
+        }
+
+        settings["isFirstTime"] = false;
+        settings["api_key"] = API_KEY;
+        settings["languages"] = selected_lang;
+        settings["unit"] = selected_unit;
+        
+        writeSettings(settings);
+
+    } else {
+
+        API_KEY = settings["api_key"].get<string>();
+        selected_lang = settings["languages"].get<string>();
+        selected_unit = settings["unit"].get<string>();
+    }
+
+    cout << tempWeather.dict[selected_lang]["enter_city"];
+    getline(cin, city);
+    
     if (city == "history") {
-        string num = (argc > 4) ? argv[4] : "all";
         Weather getHistory(selected_lang);
-        getHistory.getHistoryData(num);
+        getHistory.getHistoryData();
+
     } else {
         Weather Client(API_KEY, city, selected_lang, selected_unit);
-        Client.run();
+        Client.run();        
     }
 
     return 0;
