@@ -3,7 +3,7 @@
 本專案使用 C++ 製作一個簡易的股票模擬交易系統，目的是加強資料結構與物件導向設計的實作能力，並作為大學推甄作品。
 
 ## 📁 專案結構
-
+```
 StockSimulator/
 ├── main.cpp
 ├── Makefile
@@ -17,7 +17,7 @@ StockSimulator/
 │ └── Trade.cpp
 ├── build/ # 編譯後的 .o 檔案
 └── README.md
-
+```
 
 ## 🚀 功能說明
 
