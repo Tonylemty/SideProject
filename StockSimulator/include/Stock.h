@@ -1,3 +1,5 @@
+// 股票資訊
+
 #ifndef STOCK_H
 #define STOCK_H
 
