@@ -1,5 +1,6 @@
 #include "Stock.h"
 
+Stock::Stock() {}
 
 Stock::Stock(const std::string symbol, double price): symbol(symbol), price(price) {}
 

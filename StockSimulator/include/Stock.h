@@ -6,6 +6,7 @@
 #include <string>
 class Stock {
 public:
+    Stock();
     Stock(const std::string symbol, double price);
     std::string getSymbol() const; // 取得股票代號
     double getPrice() const; // 取得價格

@@ -1,7 +1,9 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Iinclude
 
-SRC = main.cpp src/Stock.cpp src/Account.cpp src/Trade.cpp
+# 加入 Market.cpp
+SRC = main.cpp src/Stock.cpp src/Account.cpp src/Trade.cpp src/Market.cpp
+
 OBJDIR = build
 
 # 取得檔名（無路徑）
