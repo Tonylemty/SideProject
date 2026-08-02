@@ -22,16 +22,20 @@ class BuyTicketSystem:
         self.driver = webdriver.Chrome(service=SERVICE, options=OPTIONS)
         self.driver.get('https://www.railway.gov.tw/tra-tip-web/tip')
         self.driver.maximize_window()
+        self.table_rows = []
 
     def runSystem(self):
         self.inputSearchInformation()
         self.checkWord()
         self.sendSearchInformation()
-        self.buildTimeSchedule()
+        if not self.buildTimeSchedule():
+            return
         self.enterBuyTicketPage()
         self.switchToNewPage()
-        self.sendID()
-        self.verify()
+        if not self.sendID():
+            return
+        if not self.verify():
+            return
         self.printTicketInformation()
 
     # 輸入查詢條件
@@ -76,7 +80,7 @@ class BuyTicketSystem:
             else:
                 for row in self.table_rows:
                     columns = row.find_elements(By.TAG_NAME, 'td')
-                    if len(columns) >= 9:
+                    if len(columns) >= 10:
                         train_type_no = columns[0].text.strip()
                         departure_time = columns[1].text.strip()
                         arrival_time = columns[2].text.strip()
@@ -91,19 +95,23 @@ class BuyTicketSystem:
                             book_ticket = ''
                         tb.add_row([train_type_no, departure_time, arrival_time, through_time, full_price, child_price, senior_price, book_ticket])
             print(tb)
+            return True
 
         except Exception as e:
-            print('檢索發生錯誤')
+            print(f'檢索發生錯誤：{e}')
+            return False
 
     # 進入訂票頁面
     def enterBuyTicketPage(self):
         train_number = input('請輸入目標車次：')
         for row in self.table_rows:
             col = row.find_elements(By.TAG_NAME, "td")
-            if col[0].text.find(train_number) != -1:
+            if len(col) >= 10 and col[0].text.find(train_number) != -1:
                 col[9].click()
                 print('已進入訂票頁面...\n')
                 break
+        else:
+            print('查無此車次')
 
     # 獲取所有分頁的句柄和切換到最新打開的分頁
     def switchToNewPage(self):
@@ -117,10 +125,12 @@ class BuyTicketSystem:
             identify = self.driver.find_element(By.ID, 'pid')
             identify.send_keys(id)
             print("身份證字號輸入成功！")
+            return True
 
         except Exception as e:
-            print("無法定位身份證欄位")
+            print(f"無法定位身份證欄位：{e}")
             self.driver.quit()
+            return False
 
     # 處理驗證碼，等待並手動完成驗證
     # 可能會出現座位不足
@@ -132,9 +142,11 @@ class BuyTicketSystem:
             )
             self.driver.find_element(By.CLASS_NAME, "btn-3d").click()
             print("驗證完成！\n")
+            return True
         except Exception as e:
-            print("驗證失敗")
+            print(f"驗證失敗：{e}")
             self.driver.quit()
+            return False
     
     # 印出購票資訊
     def printTicketInformation(self):
@@ -160,11 +172,13 @@ class BuyTicketSystem:
             print(ticket_table)
 
             self.driver.quit()
+            return True
 
         except Exception as e:
-            print("購票失敗")
+            print(f"購票失敗：{e}")
+            return False
 
 
 if __name__ == '__main__':
-    sys = BuyTicketSystem()
-    sys.runSystem()
+    system = BuyTicketSystem()
+    system.runSystem()
