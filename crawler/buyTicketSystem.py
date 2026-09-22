@@ -5,6 +5,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 import prettytable as pt
 import os
@@ -21,7 +22,7 @@ class BuyTicketSystem:
     def __init__(self):
         self.driver = webdriver.Chrome(service=SERVICE, options=OPTIONS)
         self.driver.get('https://www.railway.gov.tw/tra-tip-web/tip')
-        self.driver.maximize_window()
+        self.driver.minimize_window()
         self.table_rows = []
 
     def runSystem(self):
@@ -30,7 +31,8 @@ class BuyTicketSystem:
         self.sendSearchInformation()
         if not self.buildTimeSchedule():
             return
-        self.enterBuyTicketPage()
+        if not self.enterBuyTicketPage():
+            return
         self.switchToNewPage()
         if not self.sendID():
             return
@@ -68,55 +70,78 @@ class BuyTicketSystem:
     def buildTimeSchedule(self):
         try:
             WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="pageContent"]/div/table/tbody'))
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'div.bk_3_list.columns'))
             )
             print("\n台鐵時刻表（目標時間後的所有資料）")
-            self.table_rows = self.driver.find_elements(By.CLASS_NAME, 'trip-column')
+            self.table_rows = self.driver.find_elements(By.CSS_SELECTOR, 'div.bk_3_list.columns')
             tb = pt.PrettyTable()
-            tb.field_names = ['車種車次（始發站 → 終點站）', '出發時間', '抵達時間', '行駛時間', '全票', '孩童票', '敬老票', '訂票']
+            tb.field_names = ['車種車次（始發站 → 終點站）', '出發時間', '抵達時間', '行駛時間', '全票', '孩童票', '訂票']
 
             if not self.table_rows:
                 tb.add_row(['查無資料'] * len(tb.field_names))
             else:
                 for row in self.table_rows:
-                    columns = row.find_elements(By.TAG_NAME, 'td')
-                    if len(columns) >= 10:
-                        train_type_no = columns[0].text.strip()
-                        departure_time = columns[1].text.strip()
-                        arrival_time = columns[2].text.strip()
-                        through_time = columns[3].text.strip()
-                        full_price = columns[6].text.strip()
-                        child_price = columns[7].text.strip()
-                        senior_price = columns[8].text.strip()
+                    fields = self._readRowFields(row)
+                    if fields is None:
+                        continue
+                    train_type_no, departure_time, arrival_time, through_time, _route, full_price, child_price, booking_cell = fields
 
-                        if (columns[9].text.strip() == '訂票'):
-                            book_ticket = '✔'
-                        else:
-                            book_ticket = ''
-                        tb.add_row([train_type_no, departure_time, arrival_time, through_time, full_price, child_price, senior_price, book_ticket])
+                    book_ticket = '✔' if booking_cell.text.strip() else ''
+                    tb.add_row([train_type_no, departure_time, arrival_time, through_time, full_price, child_price, book_ticket])
             print(tb)
             return True
 
+        except TimeoutException:
+            print('查無對應時刻表，請確認出發站、到達站、日期是否正確')
+            return False
         except Exception as e:
             print(f'檢索發生錯誤：{e}')
             return False
+
+    # 依序取出卡片中 8 個 ts_ 欄位方塊，取每個方塊的第二個 div（即實際數值）
+    def _readRowFields(self, row):
+        boxes = row.find_elements(By.CSS_SELECTOR, ':scope > div[class^="ts_"]')
+        if len(boxes) < 8:
+            return None
+        values = []
+        for box in boxes[:8]:
+            inner_divs = box.find_elements(By.TAG_NAME, 'div')
+            values.append(inner_divs[1] if len(inner_divs) >= 2 else box)
+        train_type_no = values[0].text.strip()
+        departure_time = values[1].text.strip()
+        arrival_time = values[2].text.strip()
+        through_time = values[3].text.strip()
+        route = values[4].text.strip()
+        full_price = values[5].text.strip()
+        child_price = values[6].text.strip()
+        booking_cell = values[7]
+        return train_type_no, departure_time, arrival_time, through_time, route, full_price, child_price, booking_cell
 
     # 進入訂票頁面
     def enterBuyTicketPage(self):
         train_number = input('請輸入目標車次：')
         for row in self.table_rows:
-            col = row.find_elements(By.TAG_NAME, "td")
-            if len(col) >= 10 and col[0].text.find(train_number) != -1:
-                col[9].click()
+            fields = self._readRowFields(row)
+            if fields is None:
+                continue
+            train_type_no = fields[0]
+            booking_cell = fields[7]
+            if train_type_no.find(train_number) != -1:
+                clickable = booking_cell.find_elements(By.TAG_NAME, 'a') or booking_cell.find_elements(By.TAG_NAME, 'button')
+                if not clickable:
+                    print('此班次目前尚未開放訂票（可能未在可售票區間內），請確認日期是否在開賣範圍內。')
+                    return False
+                clickable[0].click()
                 print('已進入訂票頁面...\n')
-                break
-        else:
-            print('查無此車次')
+                return True
+        print('查無此車次')
+        return False
 
     # 獲取所有分頁的句柄和切換到最新打開的分頁
     def switchToNewPage(self):
         all_tabs = self.driver.window_handles
         self.driver.switch_to.window(all_tabs[-1])
+        self.driver.minimize_window()
 
     # 輸入身份證字號
     def sendID(self):
@@ -135,7 +160,8 @@ class BuyTicketSystem:
     # 處理驗證碼，等待並手動完成驗證
     # 可能會出現座位不足
     def verify(self):
-        input('請手動勾選完 "我不是機器人" 後按下 Enter')
+        self.driver.maximize_window()  # 要手動勾驗證碼了，這時才把瀏覽器叫到前景
+        input('請手動輸入驗證碼後按下 Enter')
         try:
             WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.CLASS_NAME, "btn-3d"))
@@ -152,30 +178,14 @@ class BuyTicketSystem:
     def printTicketInformation(self):
         try:
             WebDriverWait(self.driver, 20).until(
-                EC.presence_of_element_located((By.CLASS_NAME, 'order-head'))
+                EC.presence_of_element_located((By.XPATH, '//h5[contains(text(), "訂票成功")]'))
             )
-            
-            card_id = self.driver.find_element(By.CLASS_NAME, "font18")
-
-            header_elements = self.driver.find_element(By.CLASS_NAME, 'order-head').find_elements(By.TAG_NAME, 'th')
-            headers = ['訂票代碼', header_elements[0].text.strip(), header_elements[1].text.replace("\n", " ").strip(), header_elements[4].text.strip()]
-
-            ticket_table = pt.PrettyTable()
-            ticket_table.field_names = headers
-
-            row_elements = self.driver.find_element(By.CLASS_NAME, 'passTr').find_elements(By.TAG_NAME, 'td')
-            row_data = [card_id.text.strip(), row_elements[0].text.strip(), row_elements[1].text.strip(), row_elements[4].text.strip()]
-            ticket_table.add_row(row_data)
-
-            print('訂票成功，請前往台鐵官網進行付款')
-            print("車票資訊")
-            print(ticket_table)
-
+            print('訂票成功！請前往台鐵官網進行付款')
             self.driver.quit()
             return True
 
-        except Exception as e:
-            print(f"購票失敗：{e}")
+        except TimeoutException:
+            print('訂票失敗')
             return False
 
 
